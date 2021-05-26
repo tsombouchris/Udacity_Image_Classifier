@@ -36,7 +36,8 @@ parser.add_argument('--hidden_units', type=int, default = 512 , help = 'hidden u
 ### epochs
 parser.add_argument('--epochs', type=int, default =3  , help = 'number of epochs', dest='epochs') 
 ### setting gpu
-parser.add_argument('--gpu', type=bool, default =False  , help = 'choose to work with GPU or not', dest='gpu') 
+parser.add_argument('--gpu', action='store_true', default =False  , help = 'choose to work with GPU or not', dest='gpu')
+
 
 # retrieve arguments
 args = parser.parse_args()
@@ -105,7 +106,7 @@ classifier = nn.Sequential(OrderedDict([
     ('fcl', nn.Linear(25088, arg_hidden_units)), 
     ('relu', nn.ReLU()),
     ('do' , nn.Dropout(p=0.2)),
-    ('fc2', nn.Linear(arg_hidden_units,102)),
+    ('fc2', nn.Linear(arg_hidden_units,len(train_data.class_to_idx))),
     ('output', nn.LogSoftmax(dim=1))
 ]))
 
@@ -152,13 +153,13 @@ def trainer_(epochs, steps, running_loss, print_every, training_dataset_loader, 
                     equality = top_class == labels.view(*top_class.shape)
                     accuracy += torch.mean(equality.type(torch.FloatTensor)).item()
                     
-                    print(f"Epoch {epoch+1}/{epochs}.. "
+                print(f"Epoch {epoch+1}/{epochs}.. "
                           f"Train loss: {running_loss/print_every: .3f}).."
                           f"Valid loss: {dataset_loss/len(dataset_loader): .3f}.."
                           f"Valid accuracy: {accuracy/len(dataset_loader):.3f}")
                     
-                    running_loss = 0
-                    _model.train()           
+                running_loss = 0
+                _model.train()           
     
 ### model trainning
 trainer_(epochs = arg_epochs, steps = 0, running_loss = 0, print_every = 60, training_dataset_loader = trainloader, dataset_loader = validloader, _model = model)
@@ -178,8 +179,6 @@ checkpoint = { 'epochs' : arg_epochs,
 
 torch.save(checkpoint, 'trained_model_checkpoint.pth')               
                
-
-  
 
 
 

@@ -34,7 +34,7 @@ parser.add_argument('--topk', type = int, default = 5 , help = '5 best guest of 
 ### setting category names
 parser.add_argument('--category_names', type=str, default ='cat_to_name.json' , help = 'names and category of flowers', dest='category_names')   
 ### setting gpu
-parser.add_argument('--gpu', type=bool, default =False  , help = 'choose to work with GPU or not', dest='gpu') 
+parser.add_argument('--gpu', action='store_true', default =False  , help = 'choose to work with GPU or not', dest='gpu')
 
 # retrieve arguments
 args = parser.parse_args()
@@ -61,12 +61,11 @@ with open(arg_category_names, 'r') as f:
 # a function to load a checkpoint and rebuild the model
 def load_checkpoint(filepath):
     checkpoint = torch.load(filepath)
-    #model = getattr(torchvision.models, checkpoint['arch'])(pretrained = True)
-    model = models.vgg16(pretrained = True)
+    model = getattr(models, checkpoint['arch'])(pretrained=True)
     # freeze our features parameters
     for param in model.parameters():
         param.requires_grades = False
-        model.classifier = checkpoint['classifier']
+    model.classifier = checkpoint['classifier']
     model.class_to_idx = checkpoint['class_to_idx']
     model.load_state_dict(checkpoint['state_dict'])
    
@@ -79,12 +78,24 @@ def process_image(image):
         returns an Numpy array
     '''
        
-    # TODO: Process a PIL image for use in a PyTorch model
+    # Process a PIL image for use in a PyTorch model
     im = Image.open(image)
     
     # Provide the target width and height of the image
-    (width, height) = (256, 256)
-    im_resized = im.resize((width, height))
+    width, height = im.size
+    aspect_ratio = width / height
+    if width < height:
+        new_width = 256
+        new_height = int(new_width / aspect_ratio)
+    elif height < width:
+        new_height = 256
+        new_width = int(width * aspect_ratio)
+    else: # when both sides are equal
+        new_width = 256
+        new_height = 256
+        
+    im_resized = im.resize((new_width, new_height))
+
     
     #2.crop out the center 224x224 portion of the image
     half_crop = (256-224)*0.5
@@ -135,8 +146,6 @@ def predict(image_path, model, topk=5):
     ''' Predict the class (or classes) of an image using a trained deep learning model.
     '''
     
-    # TODO: Implement the code to predict the class from an image file
-    
     #process numpy image
     image = torch.from_numpy(process_image(image_path))
     model.to(device)
@@ -159,4 +168,6 @@ def predict(image_path, model, topk=5):
 # Prediction
 model=load_checkpoint(arg_checkpoint_path)
 image_path = arg_path_to_image                              
-predict(image_path, model, topk=arg_topk)
+data = predict(image_path, model, topk=arg_topk)
+print(data)
+print('The model concludes that this flower is a {} with a probability of {}'.format(data[2][0], data[0][0]))
